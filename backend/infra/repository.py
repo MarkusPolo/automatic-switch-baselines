@@ -61,7 +61,7 @@ def get_run_logs(db: Session, run_id: int):
 def get_device_by_id(db: Session, device_id: int):
     return db.query(DBDevice).filter(DBDevice.id == device_id).first()
 
-def update_run_device_status(db: Session, run_id: int, device_id: int, status: str, error_message: Optional[str] = None):
+def update_run_device_status(db: Session, run_id: int, device_id: int, status: str, error_message: Optional[str] = None, error_code: Optional[str] = None, template_hash: Optional[str] = None):
     db_rd = db.query(DBRunDevice).filter(DBRunDevice.run_id == run_id, DBRunDevice.device_id == device_id).first()
     if not db_rd:
         db_rd = DBRunDevice(run_id=run_id, device_id=device_id)
@@ -74,6 +74,10 @@ def update_run_device_status(db: Session, run_id: int, device_id: int, status: s
         db_rd.finished_at = datetime.now(timezone.utc)
         if error_message:
             db_rd.error_message = error_message
+        if error_code:
+            db_rd.error_code = error_code
+        if template_hash:
+            db_rd.template_hash = template_hash
     
     db.commit()
     db.refresh(db_rd)

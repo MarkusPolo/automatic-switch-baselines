@@ -56,8 +56,35 @@ class CiscoVendor(BaseVendor):
         return ["write memory"]
 
     async def get_verify_commands(self, device_data: Dict[str, Any]) -> List[str]:
-        return ["show ip interface brief", "show version"]
+        vlan = device_data.get("mgmt_vlan")
+        cmds = ["show ip interface brief", "show vlan brief", "show ip ssh"]
+        if vlan:
+            cmds.append(f"show running-config interface Vlan{vlan}")
+        return cmds
 
-    def parse_verify(self, output: str) -> Dict[str, Any]:
-        success = "up" in output.lower()
-        return {"success": success, "details": f"Interfaces found: {success}"}
+    def parse_verify(self, output: str, device_data: Dict[str, Any]) -> Dict[str, Any]:
+        import re
+        expected_ip = device_data.get("mgmt_ip")
+        expected_vlan = device_data.get("mgmt_vlan")
+        
+        issues = []
+        
+        # 1. IP Check
+        if expected_ip and expected_ip not in output:
+            issues.append(f"IP {expected_ip} not found in output")
+            
+        # 2. VLAN Check
+        if expected_vlan:
+            # Allow optional leading whitespace for tests/indented output
+            vlan_pattern = re.compile(rf"^\s*{expected_vlan}\s+", re.MULTILINE)
+            if not vlan_pattern.search(output):
+                issues.append(f"VLAN {expected_vlan} not found in 'show vlan brief'")
+        
+        # 3. SSH Check
+        if "SSH Enabled" not in output and "SSH ver" not in output:
+            issues.append("SSH does not appear to be enabled")
+            
+        success = len(issues) == 0
+        details = "All checks passed" if success else "; ".join(issues)
+        
+        return {"success": success, "details": details}

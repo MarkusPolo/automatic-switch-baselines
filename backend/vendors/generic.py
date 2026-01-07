@@ -31,5 +31,7 @@ class GenericVendor(BaseVendor):
     async def get_verify_commands(self, device_data: Dict[str, Any]) -> List[str]:
         return ["show ip interface brief"]
 
-    def parse_verify(self, output: str) -> Dict[str, Any]:
-        return {"success": True, "details": "Generic verification complete"}
+    def parse_verify(self, output: str, device_data: Dict[str, Any]) -> Dict[str, Any]:
+        expected_ip = device_data.get("mgmt_ip")
+        success = expected_ip in output if expected_ip else True
+        return {"success": success, "details": f"IP {expected_ip} check: {success}"}

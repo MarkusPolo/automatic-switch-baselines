@@ -1,6 +1,6 @@
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, BackgroundTasks, Response
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from pathlib import Path
 
 from ..infra import database, repository
@@ -8,6 +8,7 @@ from ..core import models, services, policy
 import hashlib
 from fastapi import BackgroundTasks
 from ..vendors.loader import get_vendor
+from ..core.services.report_service import ReportService
 
 # Initialize DB
 database.init_db()
@@ -182,3 +183,24 @@ async def bulk_preview(job_id: int, db: Session = Depends(database.get_db)):
 @app.get("/")
 async def root():
     return {"message": "Welcome to the Automatic Switch Configuration API. Visit /docs for API documentation."}
+# Reports
+@app.get("/runs/{run_id}/report.json")
+def get_run_report_json(run_id: int, db: Session = Depends(database.get_db)):
+    service = ReportService(db)
+    report = service.generate_json_report(run_id)
+    if "error" in report:
+        raise HTTPException(status_code=404, detail=report["error"])
+    return report
+
+@app.get("/runs/{run_id}/report.csv")
+def get_run_report_csv(run_id: int, db: Session = Depends(database.get_db)):
+    service = ReportService(db)
+    csv_str = service.generate_csv_report(run_id)
+    if csv_str == "error,Run not found":
+        raise HTTPException(status_code=404, detail="Run not found")
+    
+    return Response(
+        content=csv_str,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=report_{run_id}.csv"}
+    )

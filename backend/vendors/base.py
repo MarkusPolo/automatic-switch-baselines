@@ -44,7 +44,7 @@ class BaseVendor(ABC):
         pass
 
     @abstractmethod
-    def parse_verify(self, output: str) -> Dict[str, Any]:
+    def parse_verify(self, output: str, device_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Parse verification output. Returns {'success': bool, 'details': str}.
         """

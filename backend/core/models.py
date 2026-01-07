@@ -71,6 +71,8 @@ class RunDevice(BaseModel):
     started_at: Optional[datetime] = None
     finished_at: Optional[datetime] = None
     error_message: Optional[str] = None
+    error_code: Optional[str] = None
+    template_hash: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -82,6 +84,7 @@ class EventLogBase(BaseModel):
     level: str
     message: str
     raw: Optional[str] = None
+    error_code: Optional[str] = None
 
 class EventLog(EventLogBase):
     id: int

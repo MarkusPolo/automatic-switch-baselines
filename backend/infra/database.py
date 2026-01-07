@@ -17,7 +17,7 @@ class DBJob(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     customer = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now)
     devices = relationship("DBDevice", back_populates="job")
     runs = relationship("DBRun", back_populates="job")
 
@@ -40,7 +40,7 @@ class DBRun(Base):
     __tablename__ = "runs"
     id = Column(Integer, primary_key=True, index=True)
     job_id = Column(Integer, ForeignKey("jobs.id"))
-    started_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime, default=datetime.now)
     finished_at = Column(DateTime, nullable=True)
     status = Column(String, default="running")
     parallelism = Column(Integer, default=4)
@@ -57,6 +57,8 @@ class DBRunDevice(Base):
     started_at = Column(DateTime, nullable=True)
     finished_at = Column(DateTime, nullable=True)
     error_message = Column(Text, nullable=True)
+    error_code = Column(String, nullable=True)
+    template_hash = Column(String, nullable=True)
     run = relationship("DBRun", back_populates="run_devices")
 
 class DBEventLog(Base):
@@ -65,10 +67,11 @@ class DBEventLog(Base):
     run_id = Column(Integer, ForeignKey("runs.id"))
     device_id = Column(Integer, ForeignKey("devices.id"), nullable=True)
     port = Column(Integer, nullable=True)
-    ts = Column(DateTime, default=datetime.utcnow)
+    ts = Column(DateTime, default=datetime.now)
     level = Column(String)
     message = Column(Text)
     raw = Column(Text, nullable=True)
+    error_code = Column(String, nullable=True)
     run = relationship("DBRun", back_populates="event_logs")
 
 def init_db():

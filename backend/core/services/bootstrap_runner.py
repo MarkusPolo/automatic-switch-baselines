@@ -20,6 +20,14 @@ ERROR_PATTERNS = [
     re.compile(r"% Error", re.IGNORECASE),
 ]
 
+class ErrorCode:
+    SERIAL_TIMEOUT = "SERIAL_TIMEOUT"
+    PROMPT_NOT_FOUND = "PROMPT_NOT_FOUND"
+    COMMAND_ERROR = "COMMAND_ERROR"
+    VERIFY_FAILED = "VERIFY_FAILED"
+    TEMPLATE_ERROR = "TEMPLATE_ERROR"
+    VALIDATION_ERROR = "VALIDATION_ERROR"
+
 class BootstrapRunner:
     def __init__(self, db: Session, run_id: int, device_id: int):
         self.db = db
@@ -32,7 +40,7 @@ class BootstrapRunner:
             vendor_id = self.device.vendor
         self.vendor = get_vendor(vendor_id)
 
-    async def log_event(self, level: str, message: str, raw: Optional[str] = None):
+    async def log_event(self, level: str, message: str, raw: Optional[str] = None, error_code: Optional[str] = None):
         event = database.DBEventLog(
             run_id=self.run_id,
             device_id=self.device_id,
@@ -40,6 +48,7 @@ class BootstrapRunner:
             level=level,
             message=message,
             raw=raw,
+            error_code=error_code,
             ts=datetime.now(timezone.utc)
         )
         self.db.add(event)
@@ -76,23 +85,42 @@ class BootstrapRunner:
             }
             blocks = await self.vendor.get_bootstrap_commands(config_params)
             
+            # Calculate template hash
+            import hashlib
+            full_config_str = ""
+            for b in blocks:
+                full_config_str += "\n".join(b.commands) + "\n"
+            t_hash = hashlib.sha256(full_config_str.encode()).hexdigest()[:12]
+            
+            # Update status with hash early
+            repository.update_run_device_status(self.db, self.run_id, self.device_id, "RUNNING", template_hash=t_hash)
+            
             # Step 3: Apply Command Blocks
-            await self.log_event("INFO", f"Applying {len(blocks)} configuration blocks...")
+            await self.log_event("INFO", f"Applying {len(blocks)} configuration blocks (hash: {t_hash})...")
             for block in blocks:
                 await self.log_event("INFO", f"Running block: {block.name}")
                 for cmd in block.commands:
                     if not cmd.strip():
                         continue
                     
-                    await asyncio.to_thread(self.session.send_line, cmd)
-                    output = await asyncio.to_thread(self.session.read_until_prompt)
+                    try:
+                        await asyncio.to_thread(self.session.send_line, cmd)
+                        output = await asyncio.to_thread(self.session.read_until_prompt)
+                    except TimeoutError:
+                        await self.log_event("ERROR", f"Serial timeout on command: {cmd}", error_code=ErrorCode.SERIAL_TIMEOUT)
+                        repository.update_run_device_status(self.db, self.run_id, self.device_id, "FAILED", error_message=f"Timeout on {cmd}", error_code=ErrorCode.SERIAL_TIMEOUT)
+                        return
                     
                     # Check for errors
                     for pattern in ERROR_PATTERNS:
                         if pattern.search(output):
-                            await self.log_event("ERROR", f"Command failed: {cmd}", raw=output)
+                            await self.log_event("ERROR", f"Command failed: {cmd}", raw=output, error_code=ErrorCode.COMMAND_ERROR)
                             if block.critical:
-                                repository.update_run_device_status(self.db, self.run_id, self.device_id, "FAILED", error_message=f"Critical Error in {block.name}: {cmd}")
+                                repository.update_run_device_status(
+                                    self.db, self.run_id, self.device_id, "FAILED", 
+                                    error_message=f"Critical Error in {block.name}: {cmd}",
+                                    error_code=ErrorCode.COMMAND_ERROR
+                                )
                                 return
                             else:
                                 await self.log_event("WARNING", f"Ignoring non-critical error in {block.name}")
@@ -105,7 +133,7 @@ class BootstrapRunner:
                 await asyncio.to_thread(self.session.send_line, v_cmd)
                 full_output += await asyncio.to_thread(self.session.read_until_prompt)
 
-            verify_result = self.vendor.parse_verify(full_output)
+            verify_result = self.vendor.parse_verify(full_output, config_params)
             if verify_result['success']:
                 await self.log_event("INFO", f"Verification successful: {verify_result['details']}")
                 
@@ -118,12 +146,22 @@ class BootstrapRunner:
                 
                 repository.update_run_device_status(self.db, self.run_id, self.device_id, "VERIFIED")
             else:
-                await self.log_event("ERROR", f"Verification failed: {verify_result['details']}", raw=full_output)
-                repository.update_run_device_status(self.db, self.run_id, self.device_id, "FAILED", error_message=f"Verification failed: {verify_result['details']}")
+                await self.log_event("ERROR", f"Verification failed: {verify_result['details']}", raw=full_output, error_code=ErrorCode.VERIFY_FAILED)
+                repository.update_run_device_status(
+                    self.db, self.run_id, self.device_id, "FAILED", 
+                    error_message=f"Verification failed: {verify_result['details']}",
+                    error_code=ErrorCode.VERIFY_FAILED
+                )
 
         except Exception as e:
-            await self.log_event("ERROR", f"Execution error: {str(e)}")
-            repository.update_run_device_status(self.db, self.run_id, self.device_id, "FAILED", error_message=str(e))
+            err_code = ErrorCode.COMMAND_ERROR
+            if "timeout" in str(e).lower():
+                err_code = ErrorCode.SERIAL_TIMEOUT
+            elif "prompt" in str(e).lower():
+                err_code = ErrorCode.PROMPT_NOT_FOUND
+                
+            await self.log_event("ERROR", f"Execution error: {str(e)}", error_code=err_code)
+            repository.update_run_device_status(self.db, self.run_id, self.device_id, "FAILED", error_message=str(e), error_code=err_code)
         finally:
             if self.session:
                 await asyncio.to_thread(self.session.close)

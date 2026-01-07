@@ -67,3 +67,23 @@ def test_import_csv_endpoint():
     dev_resp = client.get(f"/jobs/{job_id}/devices")
     assert len(dev_resp.json()) == 1
     assert dev_resp.json()[0]["hostname"] == "Switch1"
+
+def test_dry_run_endpoint():
+    # Create job
+    job_resp = client.post("/jobs", json={"name": "Dry Run Job"})
+    job_id = job_resp.json()["id"]
+    
+    # Add two devices with duplicate IP
+    client.post(f"/jobs/{job_id}/devices", json={
+        "job_id": job_id, "hostname": "sw1", "mgmt_ip": "10.0.0.1", "mask": "/24", "gateway": "10.0.0.254"
+    })
+    client.post(f"/jobs/{job_id}/devices", json={
+        "job_id": job_id, "hostname": "sw2", "mgmt_ip": "10.0.0.1", "mask": "/24", "gateway": "10.0.0.254"
+    })
+    
+    # Run dry-run
+    response = client.post(f"/jobs/{job_id}/dry-run")
+    assert response.status_code == 200
+    errors = response.json()
+    assert len(errors) > 0
+    assert any("Duplicate management IP" in e["message"] for e in errors)

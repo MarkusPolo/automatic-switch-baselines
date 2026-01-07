@@ -4,7 +4,7 @@ from typing import List
 from pathlib import Path
 
 from ..infra import database, repository
-from ..core import models, services
+from ..core import models, services, policy
 
 # Initialize DB
 database.init_db()
@@ -104,6 +104,25 @@ def get_run(run_id: int, db: Session = Depends(database.get_db)):
 @app.get("/runs/{run_id}/logs", response_model=List[models.EventLog])
 def get_run_logs(run_id: int, db: Session = Depends(database.get_db)):
     return repository.get_event_logs(db, run_id)
+
+# Dry-run
+@app.post("/jobs/{job_id}/dry-run", response_model=List[models.ValidationError])
+def dry_run_job(job_id: int, db: Session = Depends(database.get_db)):
+    db_job = repository.get_job(db, job_id)
+    if not db_job:
+        raise HTTPException(status_code=404, detail="Job not found")
+        
+    devices = repository.get_devices_by_job(db, job_id)
+    all_errors = []
+    
+    # Convert DB models to Pydantic for policy validation
+    pydantic_devices = [models.Device.model_validate(d) for d in devices]
+    
+    for device in pydantic_devices:
+        errors = policy.validate_device_config(device, pydantic_devices)
+        all_errors.extend(errors)
+        
+    return all_errors
 
 @app.get("/")
 async def root():

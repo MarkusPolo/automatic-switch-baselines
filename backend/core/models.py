@@ -89,3 +89,10 @@ class EventLog(EventLogBase):
 
     class Config:
         from_attributes = True
+
+class ValidationError(BaseModel):
+    field: str
+    device_id: Optional[int] = None
+    row: Optional[int] = None
+    message: str
+    suggestion: Optional[str] = None

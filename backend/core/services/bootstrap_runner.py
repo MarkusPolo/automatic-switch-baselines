@@ -8,6 +8,7 @@ import re
 from ...infra.serial import SerialSession
 from ...infra import repository, database
 from ...infra.database import get_db
+from ...app.config import settings
 from .. import models
 from ...vendors.loader import get_vendor
 
@@ -59,7 +60,7 @@ class BootstrapRunner:
             await self.log_event("ERROR", "Device or port not specified")
             return
 
-        port_path = f"/dev/port{self.device.port}"
+        port_path = f"{settings.SERIAL_PORT_BASE_PATH}{self.device.port}"
         
         try:
             repository.update_run_device_status(self.db, self.run_id, self.device_id, "RUNNING")

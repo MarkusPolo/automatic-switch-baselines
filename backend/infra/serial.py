@@ -65,13 +65,14 @@ class SerialSession:
 
 
 
-def discover_ports(base_path: str = "/dev/port") -> List[str]:
+def discover_ports(base_path: str = None) -> List[str]:
     """
-    Finds symlinks like /dev/port1, /dev/port2, ..., /dev/port16.
+    Finds symlinks like /home/administrator/port1, /home/administrator/port2, ...
     """
+    actual_base = base_path if base_path is not None else settings.SERIAL_PORT_BASE_PATH
     available_ports = []
     for i in range(1, 17):
-        port_path = f"{base_path}{i}"
+        port_path = f"{actual_base}{i}"
         if os.path.exists(port_path):
             available_ports.append(port_path)
     return available_ports

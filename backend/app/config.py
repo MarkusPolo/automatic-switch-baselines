@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     # Serial Defaults
     SERIAL_BAUDRATE: int = 9600
     SERIAL_TIMEOUT: int = 10
+    SERIAL_PORT_BASE_PATH: str = "/home/administrator/port"
     
     # Execution
     DEFAULT_PARALLELISM: int = 4

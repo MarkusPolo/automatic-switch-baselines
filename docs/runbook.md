@@ -5,13 +5,13 @@ This document provides instructions for setting up, operating, and troubleshooti
 ## Raspberry Pi Setup
 
 1.  **OS Installation**: Use Raspberry Pi OS Lite (64-bit recommended).
-2.  **User Configuration**: Ensure the default user (usually `pi`) is in the `dialout` group to access serial ports:
+2.  **User Configuration**: Ensure the default user (e.g. `administrator`) is in the `dialout` group to access serial ports:
     ```bash
-    sudo usermod -a -G dialout pi
+    sudo usermod -a -G dialout administrator
     ```
-3.  **udev Rules**: For consistent port mapping (e.g., `/dev/port1`), create `/etc/udev/rules.d/99-serial.rules`:
+3.  **udev Rules**: For consistent port mapping (e.g., `/home/administrator/port1`), create `/etc/udev/rules.d/99-serial.rules`:
     ```text
-    SUBSYSTEM=="tty", ATTRS{idVendor}=="xxxx", ATTRS{idProduct}=="yyyy", SYMLINK+="port1"
+    SUBSYSTEM=="tty", ATTRS{idVendor}=="xxxx", ATTRS{idProduct}=="yyyy", SYMLINK+="home/administrator/port%n"
     ```
     (Replace IDs with your specific USB-to-Serial hub IDs).
 
@@ -19,11 +19,11 @@ This document provides instructions for setting up, operating, and troubleshooti
 
 1.  Clone the repository:
     ```bash
-    git clone https://github.com/MarkusPolo/automatic-switch-baselines.git /home/pi/automatic-switch-baselines
+    git clone https://github.com/MarkusPolo/automatic-switch-baselines.git /home/administrator/automatic-switch-baselines
     ```
 2.  Setup Virtual Environment:
     ```bash
-    cd /home/pi/automatic-switch-baselines
+    cd /home/administrator/automatic-switch-baselines
     python -m venv .venv
     ./.venv/bin/pip install poetry
     ./.venv/bin/poetry install
@@ -44,8 +44,8 @@ This document provides instructions for setting up, operating, and troubleshooti
 
 ### Port Busy or Permission Denied
 - **Symptoms**: `RuntimeError: Serial port not open` or `Permission denied`.
-- **Check**: Run `ls -l /dev/port*`. Ensure the user running the service is in the `dialout` group.
-- **Check**: Run `fuser /dev/port1` to see if another process is using the port.
+- **Check**: Run `ls -l /home/administrator/port*`. Ensure the user running the service is in the `dialout` group.
+- **Check**: Run `fuser /home/administrator/port1` to see if another process is using the port.
 
 ### No Prompt Found (Timeout)
 - **Symptoms**: `ErrorCode: SERIAL_TIMEOUT` in logs.
@@ -53,7 +53,7 @@ This document provides instructions for setting up, operating, and troubleshooti
 - **Check**: Verify the `SERIAL_BAUDRATE` in `/etc/switch-bootstrapper.env` matches the switch defaults (9600 for Cisco).
 
 ### Database Corruption
-- **Check**: The SQLite database file is at `/home/pi/automatic-switch-baselines/automatic_switch.db` by default. You can inspect it with `sqlite3`.
+- **Check**: The SQLite database file is at `/home/administrator/automatic-switch-baselines/automatic_switch.db` by default. You can inspect it with `sqlite3`.
 
 ## Upgrade Procedure
 

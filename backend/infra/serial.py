@@ -4,11 +4,13 @@ import time
 import re
 from typing import List, Optional
 
+from ..app.config import settings
+
 class SerialSession:
-    def __init__(self, port: str, baudrate: int = 9600, timeout: float = 1.0):
+    def __init__(self, port: str, baudrate: int = None, timeout: float = None):
         self.port = port
-        self.baudrate = baudrate
-        self.timeout = timeout
+        self.baudrate = baudrate if baudrate is not None else settings.SERIAL_BAUDRATE
+        self.timeout = timeout if timeout is not None else settings.SERIAL_TIMEOUT
         self.ser: Optional[serial.Serial] = None
 
     def open(self):

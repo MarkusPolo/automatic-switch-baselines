@@ -3,12 +3,22 @@ Description=Automatic Switch Configuration Service
 After=network.target
 
 [Service]
+# Adjust User/Group to your Pi user (usually 'pi')
 User=pi
-Group=pi
+Group=dialout
 WorkingDirectory=/home/pi/automatic-switch-baselines
-Environment="PATH=/home/pi/automatic-switch-baselines/.venv/bin"
+EnvironmentFile=/etc/switch-bootstrapper.env
+
+# Start backend using uvicorn
 ExecStart=/home/pi/automatic-switch-baselines/.venv/bin/uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+
+# Restart on failure
 Restart=always
+RestartSec=5
+
+# Logging
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

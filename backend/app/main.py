@@ -1,13 +1,17 @@
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, BackgroundTasks, Response
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, BackgroundTasks, Response, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from typing import List, Optional
 from pathlib import Path
 
 from ..infra import database, repository
 from ..core import models, services, policy
+from ..infra.serial import discover_ports
+from ..core.services.scheduler import RunManager
+from .config import settings
 import hashlib
-from fastapi import BackgroundTasks
 from ..vendors.loader import get_vendor
 from ..core.services.report_service import ReportService
 
@@ -22,19 +26,44 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def passcode_protection(request: Request, call_next):
+    # Skip passcode for health and root
+    if request.url.path in ["/health", "/", "/docs", "/openapi.json"]:
+        return await call_next(request)
+        
+    if settings.API_PASSCODE:
+        passcode = request.headers.get("X-Passcode")
+        if passcode != settings.API_PASSCODE:
+            return JSONResponse(status_code=403, content={"detail": "Invalid or missing passcode"})
+    return await call_next(request)
+
 # Health
 @app.get("/health")
-async def health_check():
+async def health_check(db: Session = Depends(database.get_db)):
+    db_ok = False
+    try:
+        db.execute(text("SELECT 1"))
+        db_ok = True
+    except Exception:
+        pass
+        
+    ports = discover_ports()
+    
     return {
-        "status": "healthy",
-        "version": "0.1.0",
-        "message": "Automatic Switch Configuration Service is running."
+        "status": "healthy" if db_ok else "degraded",
+        "database": "ok" if db_ok else "error",
+        "serial_ports": {
+            "count": len(ports),
+            "available": ports
+        },
+        "version": "0.1.0"
     }
 
 # Jobs
@@ -105,6 +134,9 @@ def get_ports(db: Session = Depends(database.get_db)):
 @app.post("/jobs/{job_id}/runs", response_model=models.Run)
 def create_run(job_id: int, run_create: models.RunCreate, background_tasks: BackgroundTasks, db: Session = Depends(database.get_db)):
     run_create.job_id = job_id
+    if run_create.parallelism is None:
+        run_create.parallelism = settings.DEFAULT_PARALLELISM
+        
     db_run = repository.create_run(db, run_create)
     
     # Trigger background execution

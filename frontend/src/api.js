@@ -64,13 +64,13 @@ export const api = {
   runDryRun: (jobId) => request(`/jobs/${jobId}/dry-run`, { method: 'POST' }),
 
   // Runs
-  getRunsByJob: (jobId) => request(`/jobs/${jobId}/runs`), // Not strictly needed for wizard but good to have
+  getRuns: (jobId) => request(`/jobs/${jobId}/runs`),
   createRun: (jobId, parallelism = 4) => request(`/jobs/${jobId}/runs`, {
     method: 'POST',
     body: JSON.stringify({ job_id: jobId, parallelism }),
   }),
   getRun: (id) => request(`/runs/${id}`),
-  getRunDevices: (jobId) => request(`/jobs/${jobId}/devices`),
+  getRunDevices: (runId) => request(`/runs/${runId}/devices`),
   getRunLogs: (id) => request(`/runs/${id}/logs`),
 
   // Reports

@@ -42,6 +42,11 @@ class BootstrapRunner:
         self.vendor = get_vendor(vendor_id)
 
     async def log_event(self, level: str, message: str, raw: Optional[str] = None, error_code: Optional[str] = None):
+        # Print to stdout for systemd journal
+        print(f"[{level}] {message}")
+        if raw:
+             print(f"RAW: {raw[:200]}..." if len(raw) > 200 else f"RAW: {raw}")
+
         event = database.DBEventLog(
             run_id=self.run_id,
             device_id=self.device_id,

@@ -58,6 +58,9 @@ def get_run(db: Session, run_id: int):
 def get_run_logs(db: Session, run_id: int):
     return db.query(DBEventLog).filter(DBEventLog.run_id == run_id).all()
 
+def get_runs_by_job(db: Session, job_id: int):
+    return db.query(DBRun).filter(DBRun.job_id == job_id).order_by(DBRun.id.desc()).all()
+
 def get_device_by_id(db: Session, device_id: int):
     return db.query(DBDevice).filter(DBDevice.id == device_id).first()
 

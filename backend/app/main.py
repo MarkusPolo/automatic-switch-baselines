@@ -148,12 +148,20 @@ def create_run(job_id: int, run_create: models.RunCreate, background_tasks: Back
     
     return db_run
 
+@app.get("/jobs/{job_id}/runs", response_model=List[models.Run])
+def get_job_runs(job_id: int, db: Session = Depends(database.get_db)):
+    return repository.get_runs_by_job(db, job_id)
+
 @app.get("/runs/{run_id}", response_model=models.Run)
 def get_run(run_id: int, db: Session = Depends(database.get_db)):
     db_run = repository.get_run(db, run_id)
     if not db_run:
         raise HTTPException(status_code=404, detail="Run not found")
     return db_run
+
+@app.get("/runs/{run_id}/devices", response_model=List[models.RunDevice])
+def get_run_devices(run_id: int, db: Session = Depends(database.get_db)):
+    return db.query(database.DBRunDevice).filter(database.DBRunDevice.run_id == run_id).all()
 
 @app.get("/runs/{run_id}/logs", response_model=List[models.EventLog])
 def get_run_logs(run_id: int, db: Session = Depends(database.get_db)):

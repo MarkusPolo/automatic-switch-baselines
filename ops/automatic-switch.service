@@ -1,0 +1,14 @@
+[Unit]
+Description=Automatic Switch Configuration Service
+After=network.target
+
+[Service]
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/automatic-switch-baselines
+Environment="PATH=/home/pi/automatic-switch-baselines/.venv/bin"
+ExecStart=/home/pi/automatic-switch-baselines/.venv/bin/uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

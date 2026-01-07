@@ -1,30 +1,58 @@
-# Automatic Switch Configuration System
+# Automatic Switch Configuration
 
-An automated solution for serial-based switch configuration, designed for high-density console environments (e.g., Raspberry Pi with 16-port serial adapter).
+A Raspberry Pi service for automatic switch configuration. This tool automates the repetitive task of initial switch setup (bootstrapping) to save time and prevent errors.
 
-## Architecture
+## Architecture: 2-Phase Design
 
-- **Frontend**: Live dashboard and wizard for job management.
-- **Backend (FastAPI)**: API for managing devices, jobs, and serial runs.
-- **Engine**: State-machine based serial communication engine.
-- **Templates**: Jinja2-based configuration templates for various vendors.
+This project follows a 2-phase approach to ensure reliability and speed:
 
-## Setup
+1.  **Phase 1: Console Bootstrap** (on the Pi)
+    - **Goal:** Minimal, standardized baseline to make the device reachable via SSH/HTTPS.
+    - **Outcome:** Device has a hostname, management IP, and SSH access enabled.
+    - **Concurrency:** Supports up to 16 parallel console sessions (via Raspberry Pi adapter).
 
-1. Install Python dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-2. Start the backend:
-   ```bash
-   cd backend
-   uvicorn main:app --reload
-   ```
-3. Start the frontend (see frontend directory for details).
+2.  **Phase 2: Remote Provisioning** (SSH/Ansible)
+    - **Goal:** Full configuration (VLANs, Trunks, STP, etc.) using idempotent methods.
+    - **Outcome:** Fully configured and verified switch.
 
-## Features
+## Quickstart
 
-- Parallel configuration of up to 16 devices.
-- Multi-phase provisioning (Console Bootstrap -> Remote Provisioning).
-- Live logs and verification reports.
-- CSV import for bulk device staging.
+### Local Development
+
+1.  **Prerequisites:** Python 3.11+, Poetry.
+2.  **Install dependencies:**
+    ```bash
+    make install
+    ```
+3.  **Run the service:**
+    ```bash
+    make run
+    ```
+4.  **Access API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+
+### Raspberry Pi Deployment
+
+1.  Clone the repository on your Pi.
+2.  Run the installation script (to be implemented).
+3.  Configure the systemd service located in `ops/`.
+4.  Start the service:
+    ```bash
+    sudo systemctl enable --now automatic-switch.service
+    ```
+
+## Security
+
+- **LAN-only assumption:** This system is designed for use within an isolated management LAN. No authentication is implemented by default.
+- **Exposure:** Do not expose this service to the public internet.
+
+## Logging
+
+- Logs are stored in the `logs/` directory (created at runtime).
+- Each job and port has its own rotating log file for detailed auditing.
+
+## Tech Stack
+
+- **Backend:** FastAPI, Python 3.11+
+- **Serial:** `pyserial`
+- **Database:** SQLite (SQLAlchemy)
+- **Templating:** Jinja2

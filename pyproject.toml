@@ -1,0 +1,41 @@
+[tool.poetry]
+name = "automatic-switch-baselines"
+version = "0.1.0"
+description = "Raspberry Pi service for automatic switch configuration."
+authors = ["Antigravity <antigravity@google.com>"]
+readme = "README.md"
+packages = [{include = "backend"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.109.0"
+uvicorn = {extras = ["standard"], version = "^0.27.0"}
+pyserial = "^3.5"
+jinja2 = "^3.1.3"
+sqlalchemy = "^2.0.25"
+python-multipart = "^0.0.6"
+httpx = "^0.26.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+ruff = "^0.1.13"
+mypy = "^1.8.0"
+pre-commit = "^3.6.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "B", "C4", "ARG", "PTH"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

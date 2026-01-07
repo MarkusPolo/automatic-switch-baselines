@@ -13,7 +13,11 @@ const request = async (path, options = {}) => {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-    throw new Error(error.detail || response.statusText);
+    let message = error.detail || response.statusText;
+    if (Array.isArray(message)) {
+      message = message.map(err => `${err.loc.join('.')}: ${err.msg}`).join(', ');
+    }
+    throw new Error(message);
   }
 
   if (response.headers.get('Content-Type')?.includes('application/json')) {

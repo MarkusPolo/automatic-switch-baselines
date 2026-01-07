@@ -55,6 +55,7 @@ function Step2Import({ jobId, onNext, onPrev }) {
         try {
             const data = {
                 ...manualForm,
+                job_id: jobId,
                 mgmt_vlan: manualForm.mgmt_vlan ? parseInt(manualForm.mgmt_vlan) : null
             };
             await api.createDevice(jobId, data);
@@ -92,17 +93,15 @@ function Step2Import({ jobId, onNext, onPrev }) {
                 You can either upload a CSV file or add devices manually.
             </p>
 
-            <div className="flex gap-4 mt-6 border-b" style={{ borderColor: 'var(--border-color)' }}>
+            <div className="tabs">
                 <button
-                    className={`pb-2 px-1 ${activeTab === 'csv' ? 'border-b-2' : ''}`}
-                    style={{ borderColor: activeTab === 'csv' ? 'var(--primary-color)' : 'transparent', color: activeTab === 'csv' ? 'var(--primary-color)' : 'inherit' }}
+                    className={`tab-btn ${activeTab === 'csv' ? 'active' : ''}`}
                     onClick={() => setActiveTab('csv')}
                 >
                     CSV Import
                 </button>
                 <button
-                    className={`pb-2 px-1 ${activeTab === 'manual' ? 'border-b-2' : ''}`}
-                    style={{ borderColor: activeTab === 'manual' ? 'var(--primary-color)' : 'transparent', color: activeTab === 'manual' ? 'var(--primary-color)' : 'inherit' }}
+                    className={`tab-btn ${activeTab === 'manual' ? 'active' : ''}`}
                     onClick={() => setActiveTab('manual')}
                 >
                     Manual Entry
@@ -147,8 +146,8 @@ function Step2Import({ jobId, onNext, onPrev }) {
 
             {activeTab === 'manual' && (
                 <form onSubmit={handleManualAdd} className="mt-4">
-                    <div className="flex flex-wrap gap-4">
-                        <div className="form-group" style={{ flex: '1 1 200px' }}>
+                    <div className="grid grid-cols-1 md-grid-cols-6 gap-4">
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
                             <label>Hostname *</label>
                             <input
                                 type="text"
@@ -158,7 +157,7 @@ function Step2Import({ jobId, onNext, onPrev }) {
                                 placeholder="sw-leaf-01"
                             />
                         </div>
-                        <div className="form-group" style={{ flex: '1 1 200px' }}>
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
                             <label>MGMT IP *</label>
                             <input
                                 type="text"
@@ -168,7 +167,7 @@ function Step2Import({ jobId, onNext, onPrev }) {
                                 placeholder="10.0.0.1"
                             />
                         </div>
-                        <div className="form-group" style={{ flex: '1 1 100px' }}>
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
                             <label>Mask *</label>
                             <input
                                 type="text"
@@ -178,7 +177,7 @@ function Step2Import({ jobId, onNext, onPrev }) {
                                 placeholder="255.255.255.0"
                             />
                         </div>
-                        <div className="form-group" style={{ flex: '1 1 200px' }}>
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
                             <label>Gateway *</label>
                             <input
                                 type="text"
@@ -188,7 +187,7 @@ function Step2Import({ jobId, onNext, onPrev }) {
                                 placeholder="10.0.0.254"
                             />
                         </div>
-                        <div className="form-group" style={{ flex: '1 1 150px' }}>
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
                             <label>Vendor</label>
                             <select
                                 value={manualForm.vendor}
@@ -198,7 +197,7 @@ function Step2Import({ jobId, onNext, onPrev }) {
                                 <option value="cisco">Cisco</option>
                             </select>
                         </div>
-                        <div className="form-group" style={{ flex: '1 1 100px' }}>
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
                             <label>VLAN</label>
                             <input
                                 type="number"
@@ -208,7 +207,7 @@ function Step2Import({ jobId, onNext, onPrev }) {
                             />
                         </div>
                     </div>
-                    <button type="submit" className="btn btn-primary mt-4" disabled={loading}>
+                    <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: 'fit-content' }}>
                         {loading ? 'Adding...' : 'Add Device'}
                     </button>
                 </form>
@@ -241,7 +240,7 @@ function Step2Import({ jobId, onNext, onPrev }) {
                                     <td>
                                         <button
                                             className="btn"
-                                            style={{ color: 'var(--error-color)', padding: '0.25rem 0.5rem' }}
+                                            style={{ color: 'var(--error-color)', padding: '0.25rem 0.5rem', background: 'none' }}
                                             onClick={() => handleDelete(dev.id)}
                                         >
                                             Delete

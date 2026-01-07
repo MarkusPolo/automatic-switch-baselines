@@ -68,16 +68,14 @@ async def test_scheduler_batching():
             active_workers -= 1
 
     # Patch BootstrapRunner.run
-    # We must patch it where it is IMPORTED in scheduler.py
     with patch("backend.core.services.scheduler.BootstrapRunner.run", mock_runner_run):
         manager = RunManager(run.id)
         await manager.execute_run()
 
     # Refresh run status
+    db.expire_all()
     run = repository.get_run(db, run.id)
     assert run.status == "COMPLETED"
-    # Given the logs proved parallelism works, let's ensure the test captures it.
-    # We might need to yield more in the mock to ensure gather starts multiple tasks.
-    assert max_active_workers_observed >= 2 # At least some concurrency
+    assert max_active_workers_observed >= 2
     
     db.close()

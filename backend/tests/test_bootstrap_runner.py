@@ -32,6 +32,8 @@ def setup_db():
         yield
     database.Base.metadata.drop_all(bind=engine)
 
+from backend.vendors.base import CommandBlock
+
 @pytest.mark.asyncio
 async def test_bootstrap_runner_success():
     db = TestingSessionLocal()
@@ -40,19 +42,26 @@ async def test_bootstrap_runner_success():
     job = repository.create_job(db, models.JobCreate(name="Test Job"))
     device = repository.create_device(db, models.DeviceCreate(
         job_id=job.id, hostname="sw1", mgmt_ip="10.0.0.1", 
-        mask="/24", gateway="10.0.0.254", port=1
+        mask="/24", gateway="10.0.0.254", port=1, vendor="generic"
     ))
     run = repository.create_run(db, models.RunCreate(job_id=job.id))
     
     # Mock SerialSession
     mock_ser = MagicMock()
-    mock_ser.read_until_prompt.side_effect = ["switch>", "sw1#", "sw1#"] # newline, config cmds, verification
+    # 1. sync prompt, 2. conf t, 3. hostname, 4. end, 5. verify, 6. save
+    mock_ser.read_until_prompt.side_effect = ["switch>", "sw1#", "sw1#", "sw1#", "sw1#", "sw1#"] 
     
     with patch("backend.core.services.bootstrap_runner.SerialSession", return_value=mock_ser):
         runner = BootstrapRunner(db, run.id, device.id)
-        # We need to mock the vendor bootstrap_config to return some commands
-        with patch.object(runner.vendor, "bootstrap_config", return_value="conf t\nhostname sw1\nend"):
-            await runner.run()
+        
+        # We need to mock the vendor methods
+        with patch.object(runner.vendor, "get_bootstrap_commands", return_value=[
+            CommandBlock(name="TestBlock", commands=["conf t", "hostname sw1", "end"])
+        ]):
+            with patch.object(runner.vendor, "get_verify_commands", return_value=["show version"]):
+                with patch.object(runner.vendor, "parse_verify", return_value={"success": True, "details": "Matches"}):
+                    with patch.object(runner.vendor, "get_save_commands", return_value=["write"]):
+                        await runner.run()
 
     # Check device status
     db_rd = db.query(database.DBRunDevice).filter_by(run_id=run.id, device_id=device.id).first()
@@ -60,7 +69,7 @@ async def test_bootstrap_runner_success():
     
     # Check logs
     logs = repository.get_run_logs(db, run.id)
-    assert any("Applying configuration commands" in l.message for l in logs)
+    assert any("Applying 1 configuration blocks" in l.message for l in logs)
     
     db.close()
 
@@ -71,7 +80,7 @@ async def test_bootstrap_runner_cli_error():
     job = repository.create_job(db, models.JobCreate(name="Test Job"))
     device = repository.create_device(db, models.DeviceCreate(
         job_id=job.id, hostname="sw1", mgmt_ip="10.0.0.1", 
-        mask="/24", gateway="10.0.0.254", port=1
+        mask="/24", gateway="10.0.0.254", port=1, vendor="generic"
     ))
     run = repository.create_run(db, models.RunCreate(job_id=job.id))
     
@@ -81,12 +90,14 @@ async def test_bootstrap_runner_cli_error():
     
     with patch("backend.core.services.bootstrap_runner.SerialSession", return_value=mock_ser):
         runner = BootstrapRunner(db, run.id, device.id)
-        with patch.object(runner.vendor, "bootstrap_config", return_value="invalid command"):
+        with patch.object(runner.vendor, "get_bootstrap_commands", return_value=[
+            CommandBlock(name="ErrorBlock", commands=["invalid command"], critical=True)
+        ]):
             await runner.run()
 
     # Check device status
     db_rd = db.query(database.DBRunDevice).filter_by(run_id=run.id, device_id=device.id).first()
     assert db_rd.status == "FAILED"
-    assert "CLI Error" in db_rd.error_message
+    assert "Critical Error" in db_rd.error_message
     
     db.close()

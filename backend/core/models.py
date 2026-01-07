@@ -96,3 +96,10 @@ class ValidationError(BaseModel):
     row: Optional[int] = None
     message: str
     suggestion: Optional[str] = None
+
+class DevicePreview(BaseModel):
+    device_id: int
+    hostname: str
+    vendor: str
+    commands: str
+    hash: str

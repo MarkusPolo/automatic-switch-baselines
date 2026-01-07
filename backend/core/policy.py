@@ -20,7 +20,7 @@ def normalize_mask(mask: str) -> str:
     # Assume it's already dotted decimal or invalid (ipaddress will catch it later)
     return mask
 
-def validate_device_config(
+async def validate_device_config(
     device: models.Device, 
     all_devices: List[models.Device]
 ) -> List[models.ValidationError]:
@@ -50,7 +50,6 @@ def validate_device_config(
     try:
         mask_obj = ipaddress.IPv4Address(norm_mask)
         # Check if it's a valid netmask
-        # Simple way: check if it's in the list of valid netmasks
         valid_masks = [str(ipaddress.IPv4Network(f"0.0.0.0/{i}").netmask) for i in range(1, 33)]
         if norm_mask not in valid_masks:
             raise ValueError("Invalid netmask")
@@ -118,5 +117,25 @@ def validate_device_config(
                 device_id=device.id,
                 message=f"Invalid port: {device.port}. Raspberry Pi adapter only supports ports 1-16."
             ))
+
+    # 8) Template Rendering Check
+    try:
+        from ..vendors.loader import get_vendor
+        vendor = get_vendor(device.vendor or "generic")
+        config_params = {
+            "hostname": device.hostname,
+            "mgmt_ip": device.mgmt_ip,
+            "mgmt_mask": norm_mask,
+            "gateway": device.gateway,
+            "mgmt_vlan": device.mgmt_vlan,
+        }
+        await vendor.get_bootstrap_commands(config_params)
+    except Exception as e:
+        errors.append(models.ValidationError(
+            field="vendor",
+            device_id=device.id,
+            message=f"Template rendering failed: {str(e)}",
+            suggestion=f"Check if vendor '{device.vendor}' is supported and template exists."
+        ))
 
     return errors

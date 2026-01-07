@@ -5,8 +5,9 @@ from pathlib import Path
 
 from ..infra import database, repository
 from ..core import models, services, policy
-from ..core.services.scheduler import RunManager
+import hashlib
 from fastapi import BackgroundTasks
+from ..vendors.loader import get_vendor
 
 # Initialize DB
 database.init_db()
@@ -113,9 +114,11 @@ def get_run(run_id: int, db: Session = Depends(database.get_db)):
 def get_run_logs(run_id: int, db: Session = Depends(database.get_db)):
     return repository.get_run_logs(db, run_id)
 
+    return all_errors
+
 # Dry-run
 @app.post("/jobs/{job_id}/dry-run", response_model=List[models.ValidationError])
-def dry_run_job(job_id: int, db: Session = Depends(database.get_db)):
+async def dry_run_job(job_id: int, db: Session = Depends(database.get_db)):
     db_job = repository.get_job(db, job_id)
     if not db_job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -127,10 +130,54 @@ def dry_run_job(job_id: int, db: Session = Depends(database.get_db)):
     pydantic_devices = [models.Device.model_validate(d) for d in devices]
     
     for device in pydantic_devices:
-        errors = policy.validate_device_config(device, pydantic_devices)
+        errors = await policy.validate_device_config(device, pydantic_devices)
         all_errors.extend(errors)
         
     return all_errors
+
+# Preview
+@app.get("/jobs/{job_id}/devices/{device_id}/preview", response_model=models.DevicePreview)
+async def get_device_preview(job_id: int, device_id: int, db: Session = Depends(database.get_db)):
+    db_device = repository.get_device_by_id(db, device_id)
+    if not db_device or db_device.job_id != job_id:
+        raise HTTPException(status_code=404, detail="Device not found")
+    
+    vendor = get_vendor(db_device.vendor or "generic")
+    config_params = {
+        "hostname": db_device.hostname,
+        "mgmt_ip": db_device.mgmt_ip,
+        "mgmt_mask": db_device.mask,
+        "gateway": db_device.gateway,
+        "mgmt_vlan": db_device.mgmt_vlan,
+    }
+    blocks = await vendor.get_bootstrap_commands(config_params)
+    
+    commands_text = ""
+    for block in blocks:
+        commands_text += f"! Block: {block.name}\n"
+        commands_text += "\n".join(block.commands) + "\n"
+    
+    cmd_hash = hashlib.sha256(commands_text.encode()).hexdigest()[:12]
+    
+    return models.DevicePreview(
+        device_id=device_id,
+        hostname=db_device.hostname,
+        vendor=vendor.vendor_id,
+        commands=commands_text,
+        hash=cmd_hash
+    )
+
+@app.post("/jobs/{job_id}/preview", response_model=List[models.DevicePreview])
+async def bulk_preview(job_id: int, db: Session = Depends(database.get_db)):
+    db_job = repository.get_job(db, job_id)
+    if not db_job:
+        raise HTTPException(status_code=404, detail="Job not found")
+        
+    devices = repository.get_devices_by_job(db, job_id)
+    previews = []
+    for device in devices:
+        previews.append(await get_device_preview(job_id, device.id, db))
+    return previews
 
 @app.get("/")
 async def root():

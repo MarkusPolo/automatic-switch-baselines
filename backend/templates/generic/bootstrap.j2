@@ -1,0 +1,6 @@
+hostname {{ hostname }}
+interface vlan 1
+ ip address {{ mgmt_ip }} {{ mgmt_mask }}
+ no shutdown
+exit
+ip default-gateway {{ gateway }}

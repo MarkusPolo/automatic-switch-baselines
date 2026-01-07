@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, BackgroundTasks, Response, Request
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -221,10 +222,14 @@ async def bulk_preview(job_id: int, db: Session = Depends(database.get_db)):
         previews.append(await get_device_preview(job_id, device.id, db))
     return previews
 
-@app.get("/")
-async def root():
-    return {"message": "Welcome to the Automatic Switch Configuration API. Visit /docs for API documentation."}
-# Reports
+# Static Files (Frontend)
+frontend_path = Path(__file__).parent.parent.parent / "frontend" / "dist"
+if frontend_path.exists():
+    app.mount("/", StaticFiles(directory=str(frontend_path), html=True), name="frontend")
+else:
+    @app.get("/")
+    async def root():
+        return {"message": "Welcome to the Automatic Switch Configuration API. Frontend not found. Visit /docs for API documentation."}
 @app.get("/runs/{run_id}/report.json")
 def get_run_report_json(run_id: int, db: Session = Depends(database.get_db)):
     service = ReportService(db)

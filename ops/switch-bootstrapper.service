@@ -10,6 +10,8 @@ WorkingDirectory=/home/administrator/automatic-switch-baselines
 EnvironmentFile=/etc/switch-bootstrapper.env
 
 # Start backend using uvicorn
+# Case A: venv -> ExecStart=/home/administrator/automatic-switch-baselines/.venv/bin/uvicorn ...
+# Case B: Conda -> ExecStart=/home/administrator/miniforge3/envs/proj311/bin/uvicorn ...
 ExecStart=/home/administrator/automatic-switch-baselines/.venv/bin/uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
 
 # Restart on failure

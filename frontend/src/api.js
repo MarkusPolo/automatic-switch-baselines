@@ -1,4 +1,6 @@
-const API_URL = 'http://localhost:8000';
+const API_URL = window.location.origin.includes('localhost:5173')
+  ? 'http://localhost:8000'
+  : '';
 
 const request = async (path, options = {}) => {
   const response = await fetch(`${API_URL}${path}`, {
@@ -33,7 +35,7 @@ export const api = {
   importCSV: (jobId, file) => {
     const formData = new FormData();
     formData.append('file', file);
-    return fetch(`${API_URL}/jobs/${jobId}/import`, {
+    return fetch(`${API_URL}/jobs/${jobId}/devices/import-csv`, {
       method: 'POST',
       body: formData,
     }).then(res => res.json());
@@ -51,14 +53,14 @@ export const api = {
   runDryRun: (jobId) => request(`/jobs/${jobId}/dry-run`, { method: 'POST' }),
 
   // Runs
-  getRuns: (jobId) => request(`/runs?job_id=${jobId}`),
-  createRun: (jobId, parallelism = 4) => request('/runs', {
+  getRunsByJob: (jobId) => request(`/jobs/${jobId}/runs`), // Not strictly needed for wizard but good to have
+  createRun: (jobId, parallelism = 4) => request(`/jobs/${jobId}/runs`, {
     method: 'POST',
     body: JSON.stringify({ job_id: jobId, parallelism }),
   }),
   getRun: (id) => request(`/runs/${id}`),
-  getRunDevices: (id) => request(`/runs/${id}/devices`),
-  getRunEvents: (id) => request(`/runs/${id}/events`),
+  getRunDevices: (jobId) => request(`/jobs/${jobId}/devices`),
+  getRunLogs: (id) => request(`/runs/${id}/logs`),
 
   // Reports
   getReportJson: (id) => `${API_URL}/runs/${id}/report.json`,

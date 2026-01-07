@@ -21,12 +21,22 @@ This document provides instructions for setting up, operating, and troubleshooti
     ```bash
     git clone https://github.com/MarkusPolo/automatic-switch-baselines.git /home/administrator/automatic-switch-baselines
     ```
-2.  Setup Virtual Environment:
+2.  Setup Python Environment:
+    
+    ### Option A: venv (Standard)
     ```bash
     cd /home/administrator/automatic-switch-baselines
     python -m venv .venv
     ./.venv/bin/pip install poetry
     ./.venv/bin/poetry install
+    ```
+
+    ### Option B: Conda / Miniforge (Alternative)
+    If using Conda (e.g. `proj311` environment):
+    ```bash
+    conda activate proj311
+    pip install -e .
+    # Note your uvicorn path with: which uvicorn
     ```
 3.  Configure Environment:
     ```bash
@@ -39,6 +49,36 @@ This document provides instructions for setting up, operating, and troubleshooti
     sudo systemctl daemon-reload
     sudo systemctl enable --now switch-bootstrapper
     ```
+
+## Frontend Deployment
+
+### Node.js Requirements
+The frontend (Vite) requires **Node.js 18.0 or higher**. Your current error suggests an older version (Node 10/12/14) is being used.
+
+#### Updating Node.js on Ubuntu (ARM/Pi)
+```bash
+# Using NodeSource (Recommended for Ubuntu)
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Verify version
+node -v # Should be v20.x
+```
+
+### Deployment Strategy: "Single Service"
+The backend is now configured to serve the frontend automatically from the `frontend/dist` folder. This means both API and UI run on port 8000.
+
+1.  **Build Frontend**:
+    ```bash
+    cd frontend
+    npm install
+    npm run build
+    ```
+2.  **Verify**:
+    If `frontend/dist` exists, the backend serves the UI at `http://<pi-ip>:8000/`.
+
+> [!TIP]
+> If building on the Pi is too slow, you can run `npm run build` on your local PC and upload the `frontend/dist` folder to the Pi manually.
 
 ## Troubleshooting
 

@@ -16,6 +16,7 @@ sqlalchemy = "^2.0.25"
 python-multipart = "^0.0.6"
 httpx = "^0.26.0"
 pydantic-settings = "^2.1.0"
+aiofiles = "^23.2.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"

@@ -93,13 +93,13 @@ def init_db():
         for table, columns in updates.items():
             existing_columns = [c["name"] for c in inspector.get_columns(table)]
             for col in columns:
-                    if col not in existing_columns:
-                        print(f"Adding missing column {col} to {table}")
-                        # Map column name to SQL type
-                        col_type = "TEXT" if col in ["template_hash", "tasks"] else "VARCHAR"
-                        try:
-                            conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
-                            conn.commit()
+                if col not in existing_columns:
+                    print(f"Adding missing column {col} to {table}")
+                    # Map column name to SQL type
+                    col_type = "TEXT" if col in ["template_hash", "tasks"] else "VARCHAR"
+                    try:
+                        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
+                        conn.commit()
                     except Exception as e:
                         print(f"Failed to add column {col} to {table}: {e}")
 

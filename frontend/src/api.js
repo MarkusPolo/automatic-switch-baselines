@@ -76,4 +76,22 @@ export const api = {
   // Reports
   getReportJson: (id) => `${API_URL}/runs/${id}/report.json`,
   getReportCsv: (id) => `${API_URL}/runs/${id}/report.csv`,
+  downloadReport: async (id, type = 'csv') => {
+    const url = type === 'json' ? `/runs/${id}/report.json` : `/runs/${id}/report.csv`;
+    const response = await fetch(`${API_URL}${url}`, {
+      headers: {
+        'X-Passcode': localStorage.getItem('api_passcode') || ''
+      }
+    });
+    if (!response.ok) throw new Error('Failed to download report');
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = `report_${id}.${type}`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(blobUrl);
+    document.body.removeChild(a);
+  }
 };

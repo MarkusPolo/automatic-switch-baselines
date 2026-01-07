@@ -161,8 +161,8 @@ function Step5Run({ jobId, onReset }) {
                             <h3>Run Completed</h3>
                             <p>Deployment finished. You can now download the audit reports.</p>
                             <div className="flex gap-2 mt-4">
-                                <a href={api.getReportCsv(activeRun.id)} className="btn btn-secondary" download>Download CSV Report</a>
-                                <a href={api.getReportJson(activeRun.id)} className="btn btn-secondary" download>Download JSON Report</a>
+                                <button className="btn btn-secondary" onClick={() => api.downloadReport(activeRun.id, 'csv')}>Download CSV Report</button>
+                                <button className="btn btn-secondary" onClick={() => api.downloadReport(activeRun.id, 'json')}>Download JSON Report</button>
                                 <button className="btn btn-primary" onClick={onReset}>Start New Job</button>
                             </div>
                         </div>

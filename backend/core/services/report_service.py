@@ -38,9 +38,6 @@ class ReportService:
             if rd.started_at and rd.finished_at:
                 duration = (rd.finished_at - rd.started_at).total_seconds()
 
-            report["devices"].append({
-                "hostname": dev.hostname if dev else "Unknown",
-                "mgmt_ip": dev.mgmt_ip if dev else "Unknown",
             tasks_list = []
             if rd.tasks:
                 try:

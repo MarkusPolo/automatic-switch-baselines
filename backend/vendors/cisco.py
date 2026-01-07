@@ -31,12 +31,12 @@ class CiscoVendor(BaseVendor):
         # Block 1: Enter Config
         blocks.append(CommandBlock(
             name="Enter Configuration",
-            commands=["conf t"],
+            commands=["en", "conf t"],
             critical=True
         ))
         
         # Block 2: Main Config
-        main_cmds = [l for l in clean_lines if l.strip() not in ["conf t", "end", "write memory"]]
+        main_cmds = [l for l in clean_lines if l.strip() not in ["en", "conf t", "end", "write memory"]]
         blocks.append(CommandBlock(
             name="Apply Baseline",
             commands=main_cmds,

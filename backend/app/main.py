@@ -167,8 +167,6 @@ def get_run_devices(run_id: int, db: Session = Depends(database.get_db)):
 def get_run_logs(run_id: int, db: Session = Depends(database.get_db)):
     return repository.get_run_logs(db, run_id)
 
-    return all_errors
-
 # Dry-run
 @app.post("/jobs/{job_id}/dry-run", response_model=List[models.ValidationError])
 async def dry_run_job(job_id: int, db: Session = Depends(database.get_db)):
@@ -232,21 +230,6 @@ async def bulk_preview(job_id: int, db: Session = Depends(database.get_db)):
         previews.append(await get_device_preview(job_id, device.id, db))
     return previews
 
-# Static Files (Frontend) - Resolved absolute path
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-frontend_path = BASE_DIR / "frontend" / "dist"
-
-if frontend_path.exists():
-    app.mount("/", StaticFiles(directory=str(frontend_path), html=True), name="frontend")
-else:
-    @app.get("/")
-    async def root():
-        return {
-            "message": "Welcome to the Automatic Switch Configuration API.",
-            "frontend_status": "Not found",
-            "checked_path": str(frontend_path),
-            "visit_docs": "/docs"
-        }
 @app.get("/runs/{run_id}/report.json")
 def get_run_report_json(run_id: int, db: Session = Depends(database.get_db)):
     service = ReportService(db)
@@ -267,3 +250,19 @@ def get_run_report_csv(run_id: int, db: Session = Depends(database.get_db)):
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=report_{run_id}.csv"}
     )
+
+# Static Files (Frontend) - Resolved absolute path
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+frontend_path = BASE_DIR / "frontend" / "dist"
+
+if frontend_path.exists():
+    app.mount("/", StaticFiles(directory=str(frontend_path), html=True), name="frontend")
+else:
+    @app.get("/")
+    async def root():
+        return {
+            "message": "Welcome to the Automatic Switch Configuration API.",
+            "frontend_status": "Not found",
+            "checked_path": str(frontend_path),
+            "visit_docs": "/docs"
+        }

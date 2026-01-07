@@ -76,7 +76,8 @@ class CiscoVendor(BaseVendor):
         # 2. VLAN Check
         if expected_vlan:
             # Allow optional leading whitespace for tests/indented output
-            vlan_pattern = re.compile(rf"^\s*{expected_vlan}\s+", re.MULTILINE)
+            # Look for the VLAN ID anywhere on the line, followed by whitespace, then 'active'
+            vlan_pattern = re.compile(rf"(^|\s){expected_vlan}\s+.*\bactive\b", re.MULTILINE | re.IGNORECASE)
             if not vlan_pattern.search(output):
                 issues.append(f"VLAN {expected_vlan} not found in 'show vlan brief'")
         

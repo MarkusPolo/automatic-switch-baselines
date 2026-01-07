@@ -1,0 +1,15 @@
+hostname {{ hostname }}
+!
+interface Vlan {{ mgmt_vlan if mgmt_vlan else 1 }}
+ description Management
+ ip address {{ mgmt_ip }} {{ mask }}
+ no shut
+!
+ip default-gateway {{ gateway }}
+!
+line vty 0 4
+ transport input ssh
+ login local
+!
+end
+write memory

@@ -76,6 +76,7 @@ function Step3Devices({ jobId, onNext, onPrev }) {
                             <th>Management IP</th>
                             <th>Vendor</th>
                             <th>Console Port (1-16)</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -99,6 +100,24 @@ function Step3Devices({ jobId, onNext, onPrev }) {
                                             <option key={i + 1} value={i + 1}>Port {i + 1}</option>
                                         ))}
                                     </select>
+                                </td>
+                                <td>
+                                    <button
+                                        className="btn"
+                                        style={{ color: 'var(--error-color)', padding: '0.25rem 0.5rem' }}
+                                        onClick={async () => {
+                                            if (window.confirm(`Delete ${dev.hostname}?`)) {
+                                                try {
+                                                    await api.deleteDevice(dev.id);
+                                                    loadDevices();
+                                                } catch (err) {
+                                                    setError(err.message);
+                                                }
+                                            }
+                                        }}
+                                    >
+                                        Delete
+                                    </button>
                                 </td>
                             </tr>
                         ))}

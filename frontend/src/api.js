@@ -43,6 +43,13 @@ export const api = {
 
   // Devices
   getDevices: (jobId) => request(`/jobs/${jobId}/devices`),
+  createDevice: (jobId, data) => request(`/jobs/${jobId}/devices`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  deleteDevice: (deviceId) => request(`/devices/${deviceId}`, {
+    method: 'DELETE',
+  }),
   updateDevice: (deviceId, data) => request(`/devices/${deviceId}`, {
     method: 'PATCH',
     body: JSON.stringify(data),

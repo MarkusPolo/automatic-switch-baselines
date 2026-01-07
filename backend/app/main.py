@@ -64,6 +64,8 @@ async def health_check(db: Session = Depends(database.get_db)):
             "count": len(ports),
             "available": ports
         },
+        "frontend_path": str(frontend_path),
+        "frontend_exists": frontend_path.exists(),
         "version": "0.1.0"
     }
 
@@ -222,14 +224,21 @@ async def bulk_preview(job_id: int, db: Session = Depends(database.get_db)):
         previews.append(await get_device_preview(job_id, device.id, db))
     return previews
 
-# Static Files (Frontend)
-frontend_path = Path(__file__).parent.parent.parent / "frontend" / "dist"
+# Static Files (Frontend) - Resolved absolute path
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+frontend_path = BASE_DIR / "frontend" / "dist"
+
 if frontend_path.exists():
     app.mount("/", StaticFiles(directory=str(frontend_path), html=True), name="frontend")
 else:
     @app.get("/")
     async def root():
-        return {"message": "Welcome to the Automatic Switch Configuration API. Frontend not found. Visit /docs for API documentation."}
+        return {
+            "message": "Welcome to the Automatic Switch Configuration API.",
+            "frontend_status": "Not found",
+            "checked_path": str(frontend_path),
+            "visit_docs": "/docs"
+        }
 @app.get("/runs/{run_id}/report.json")
 def get_run_report_json(run_id: int, db: Session = Depends(database.get_db)):
     service = ReportService(db)

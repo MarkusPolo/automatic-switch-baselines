@@ -81,6 +81,13 @@ class BootstrapRunner:
             prompt = await asyncio.to_thread(self.session.read_until_prompt)
             await self.log_event("DEBUG", f"Initial prompt detected", raw=prompt)
 
+            # Step 1.5: Run Init Commands (e.g. terminal length 0)
+            init_cmds = await self.vendor.get_init_commands()
+            for cmd in init_cmds:
+                await self.log_event("INFO", f"Running init command: {cmd}")
+                await asyncio.to_thread(self.session.send_line, cmd)
+                await asyncio.to_thread(self.session.read_until_prompt)
+
             # Step 2: Generate Config
             config_params = {
                 "hostname": self.device.hostname,
@@ -93,6 +100,7 @@ class BootstrapRunner:
             
             # Calculate template hash
             import hashlib
+            import json
             full_config_str = ""
             for b in blocks:
                 full_config_str += "\n".join(b.commands) + "\n"
@@ -140,6 +148,8 @@ class BootstrapRunner:
                 full_output += await asyncio.to_thread(self.session.read_until_prompt)
 
             verify_result = self.vendor.parse_verify(full_output, config_params)
+            tasks_json = json.dumps(verify_result.get("tasks", []))
+            
             if verify_result['success']:
                 await self.log_event("INFO", f"Verification successful: {verify_result['details']}")
                 
@@ -150,13 +160,14 @@ class BootstrapRunner:
                     await asyncio.to_thread(self.session.send_line, s_cmd)
                     await asyncio.to_thread(self.session.read_until_prompt)
                 
-                repository.update_run_device_status(self.db, self.run_id, self.device_id, "VERIFIED")
+                repository.update_run_device_status(self.db, self.run_id, self.device_id, "VERIFIED", tasks=tasks_json)
             else:
                 await self.log_event("ERROR", f"Verification failed: {verify_result['details']}", raw=full_output, error_code=ErrorCode.VERIFY_FAILED)
                 repository.update_run_device_status(
                     self.db, self.run_id, self.device_id, "FAILED", 
                     error_message=f"Verification failed: {verify_result['details']}",
-                    error_code=ErrorCode.VERIFY_FAILED
+                    error_code=ErrorCode.VERIFY_FAILED,
+                    tasks=tasks_json
                 )
 
         except Exception as e:

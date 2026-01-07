@@ -14,6 +14,9 @@ class CiscoVendor(BaseVendor):
             return 0.9
         return 0.0
 
+    async def get_init_commands(self) -> List[str]:
+        return ["terminal length 0"]
+
     async def get_bootstrap_commands(self, device_data: Dict[str, Any]) -> List[CommandBlock]:
         template_dir = os.path.join(os.path.dirname(__file__), "..", "templates", "cisco")
         env = Environment(loader=FileSystemLoader(template_dir))
@@ -66,26 +69,66 @@ class CiscoVendor(BaseVendor):
         import re
         expected_ip = device_data.get("mgmt_ip")
         expected_vlan = device_data.get("mgmt_vlan")
+        hostname = device_data.get("hostname")
         
+        tasks = []
         issues = []
         
-        # 1. IP Check
-        if expected_ip and expected_ip not in output:
-            issues.append(f"IP {expected_ip} not found in output")
+        # 1. Hostname Check
+        if hostname:
+            # Simple check if hostname appears in prompt or config
+             # Heuristic: Prompt should change to hostname
+            prompt_pattern = re.compile(rf"^{hostname}[>#]", re.MULTILINE)
+            active_hostname = "Unknown"
+            # Try to find the prompt in the raw output
+            match = prompt_pattern.search(output)
+            passed = bool(match) or hostname in output
             
-        # 2. VLAN Check
+            tasks.append({
+                "name": "Verify Hostname",
+                "status": "success" if passed else "failed",
+                "message": f"Hostname set to {hostname}" if passed else "Hostname mismatch",
+                "code": "HOSTNAME_MATCH" if passed else "HOSTNAME_MISMATCH"
+            })
+            if not passed: issues.append("Hostname mismatch")
+
+        # 2. IP Check
+        if expected_ip:
+            passed = expected_ip in output
+            tasks.append({
+                "name": "Verify IP Address",
+                "status": "success" if passed else "failed",
+                "message": f"IP {expected_ip} found" if passed else f"IP {expected_ip} not found",
+                "code": "IP_MATCH" if passed else "IP_MISMATCH"
+            })
+            if not passed: issues.append(f"IP {expected_ip} missing")
+            
+        # 3. VLAN Check
         if expected_vlan:
             # Allow optional leading whitespace for tests/indented output
             # Look for the VLAN ID anywhere on the line, followed by whitespace, then 'active'
             vlan_pattern = re.compile(rf"(^|\s){expected_vlan}\s+.*\bactive\b", re.MULTILINE | re.IGNORECASE)
-            if not vlan_pattern.search(output):
-                issues.append(f"VLAN {expected_vlan} not found in 'show vlan brief'")
+            passed = bool(vlan_pattern.search(output))
+            
+            tasks.append({
+                "name": f"Verify VLAN {expected_vlan}",
+                "status": "success" if passed else "failed",
+                "message": f"VLAN {expected_vlan} is active" if passed else f"VLAN {expected_vlan} not active/found",
+                "code": "VLAN_MATCH" if passed else "VLAN_MISMATCH"
+            })
+            if not passed: issues.append(f"VLAN {expected_vlan} missing")
         
-        # 3. SSH Check
-        if "SSH Enabled" not in output and "SSH ver" not in output:
-            issues.append("SSH does not appear to be enabled")
+        # 4. SSH Check
+        ssh_passed = "SSH Enabled" in output or "SSH ver" in output
+        tasks.append({
+            "name": "Verify SSH",
+            "status": "success" if ssh_passed else "failed",
+            "message": "SSH is enabled" if ssh_passed else "SSH disabled",
+            "code": "SSH_ENABLED" if ssh_passed else "SSH_DISABLED"
+        })
+        if not ssh_passed: issues.append("SSH disabled")
             
         success = len(issues) == 0
         details = "All checks passed" if success else "; ".join(issues)
         
-        return {"success": success, "details": details}
+        return {"success": success, "details": details, "tasks": tasks}

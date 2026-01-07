@@ -22,6 +22,12 @@ class BaseVendor(ABC):
         """
         pass
 
+    async def get_init_commands(self) -> List[str]:
+        """
+        Commands to run immediately after connection (e.g. ['terminal length 0']).
+        """
+        return []
+
     @abstractmethod
     async def get_bootstrap_commands(self, device_data: Dict[str, Any]) -> List[CommandBlock]:
         """

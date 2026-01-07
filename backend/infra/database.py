@@ -60,6 +60,7 @@ class DBRunDevice(Base):
     error_message = Column(Text, nullable=True)
     error_code = Column(String, nullable=True)
     template_hash = Column(String, nullable=True)
+    tasks = Column(Text, nullable=True) # JSON list of verification steps
     run = relationship("DBRun", back_populates="run_devices")
 
 class DBEventLog(Base):
@@ -85,20 +86,20 @@ def init_db():
     with engine.connect() as conn:
         # Tables to check
         updates = {
-            "run_devices": ["error_code", "template_hash"],
+            "run_devices": ["error_code", "template_hash", "tasks"],
             "event_logs": ["error_code"]
         }
         
         for table, columns in updates.items():
             existing_columns = [c["name"] for c in inspector.get_columns(table)]
             for col in columns:
-                if col not in existing_columns:
-                    print(f"Adding missing column {col} to {table}")
-                    # Map column name to SQL type
-                    col_type = "TEXT" if col == "template_hash" else "VARCHAR"
-                    try:
-                        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
-                        conn.commit()
+                    if col not in existing_columns:
+                        print(f"Adding missing column {col} to {table}")
+                        # Map column name to SQL type
+                        col_type = "TEXT" if col in ["template_hash", "tasks"] else "VARCHAR"
+                        try:
+                            conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
+                            conn.commit()
                     except Exception as e:
                         print(f"Failed to add column {col} to {table}: {e}")
 

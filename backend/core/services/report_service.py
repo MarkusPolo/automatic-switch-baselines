@@ -41,6 +41,16 @@ class ReportService:
             report["devices"].append({
                 "hostname": dev.hostname if dev else "Unknown",
                 "mgmt_ip": dev.mgmt_ip if dev else "Unknown",
+            tasks_list = []
+            if rd.tasks:
+                try:
+                    tasks_list = json.loads(rd.tasks)
+                except:
+                    tasks_list = []
+
+            report["devices"].append({
+                "hostname": dev.hostname if dev else "Unknown",
+                "mgmt_ip": dev.mgmt_ip if dev else "Unknown",
                 "port": dev.port if dev else rd.port, # dev has port, rd has port in DB schema (wait, I should check database.py)
                 "status": rd.status,
                 "started_at": rd.started_at.isoformat() if rd.started_at else None,
@@ -48,7 +58,8 @@ class ReportService:
                 "duration_seconds": duration,
                 "error_message": rd.error_message,
                 "error_code": rd.error_code,
-                "template_hash": rd.template_hash
+                "template_hash": rd.template_hash,
+                "tasks": tasks_list
             })
 
         return report
@@ -65,12 +76,22 @@ class ReportService:
         fieldnames = [
             "hostname", "mgmt_ip", "port", "status", 
             "started_at", "finished_at", "duration_seconds", 
-            "error_message", "error_code", "template_hash"
+            "error_message", "error_code", "template_hash", "tasks_summary"
         ]
         
         writer = csv.DictWriter(output, fieldnames=fieldnames)
         writer.writeheader()
         for dev in json_report["devices"]:
-            writer.writerow(dev)
+            # Flatten tasks for CSV
+            tasks_str = ""
+            if dev.get("tasks"):
+                tasks_str = "; ".join([f"{t['name']}: {t['status']}" for t in dev["tasks"]])
+            dev["tasks_summary"] = tasks_str
+            
+            # Remove raw tasks list from CSV dict to avoid error
+            row = dev.copy()
+            if "tasks" in row: del row["tasks"]
+            
+            writer.writerow(row)
             
         return output.getvalue()

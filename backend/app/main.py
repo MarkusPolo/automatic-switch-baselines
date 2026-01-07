@@ -5,6 +5,8 @@ from pathlib import Path
 
 from ..infra import database, repository
 from ..core import models, services, policy
+from ..core.services.scheduler import RunManager
+from fastapi import BackgroundTasks
 
 # Initialize DB
 database.init_db()
@@ -90,9 +92,15 @@ def get_ports(db: Session = Depends(database.get_db)):
 
 # Runs
 @app.post("/jobs/{job_id}/runs", response_model=models.Run)
-def create_run(job_id: int, run_create: models.RunCreate, db: Session = Depends(database.get_db)):
+def create_run(job_id: int, run_create: models.RunCreate, background_tasks: BackgroundTasks, db: Session = Depends(database.get_db)):
     run_create.job_id = job_id
-    return repository.create_run(db, run_create)
+    db_run = repository.create_run(db, run_create)
+    
+    # Trigger background execution
+    manager = RunManager(db_run.id)
+    background_tasks.add_task(manager.execute_run)
+    
+    return db_run
 
 @app.get("/runs/{run_id}", response_model=models.Run)
 def get_run(run_id: int, db: Session = Depends(database.get_db)):
@@ -103,7 +111,7 @@ def get_run(run_id: int, db: Session = Depends(database.get_db)):
 
 @app.get("/runs/{run_id}/logs", response_model=List[models.EventLog])
 def get_run_logs(run_id: int, db: Session = Depends(database.get_db)):
-    return repository.get_event_logs(db, run_id)
+    return repository.get_run_logs(db, run_id)
 
 # Dry-run
 @app.post("/jobs/{job_id}/dry-run", response_model=List[models.ValidationError])

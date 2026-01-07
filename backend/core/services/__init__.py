@@ -2,8 +2,8 @@ import csv
 import io
 from typing import List, Dict, Any, Tuple
 from sqlalchemy.orm import Session
-from . import models
-from ..infra import repository
+from .. import models
+from ...infra import repository
 
 def import_devices_from_csv(db: Session, job_id: int, csv_content: str) -> Tuple[int, List[str]]:
     """

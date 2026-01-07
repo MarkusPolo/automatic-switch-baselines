@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from .database import DBJob, DBDevice, DBRun, DBRunDevice, DBEventLog
@@ -54,5 +55,35 @@ def create_run(db: Session, run: models.RunCreate):
 def get_run(db: Session, run_id: int):
     return db.query(DBRun).filter(DBRun.id == run_id).first()
 
-def get_event_logs(db: Session, run_id: int):
+def get_run_logs(db: Session, run_id: int):
     return db.query(DBEventLog).filter(DBEventLog.run_id == run_id).all()
+
+def get_device_by_id(db: Session, device_id: int):
+    return db.query(DBDevice).filter(DBDevice.id == device_id).first()
+
+def update_run_device_status(db: Session, run_id: int, device_id: int, status: str, error_message: Optional[str] = None):
+    db_rd = db.query(DBRunDevice).filter(DBRunDevice.run_id == run_id, DBRunDevice.device_id == device_id).first()
+    if not db_rd:
+        db_rd = DBRunDevice(run_id=run_id, device_id=device_id)
+        db.add(db_rd)
+    
+    db_rd.status = status
+    if status == "RUNNING":
+        db_rd.started_at = datetime.now(timezone.utc)
+    elif status in ["VERIFIED", "FAILED"]:
+        db_rd.finished_at = datetime.now(timezone.utc)
+        if error_message:
+            db_rd.error_message = error_message
+    
+    db.commit()
+    db.refresh(db_rd)
+    return db_rd
+
+def update_run_status(db: Session, run_id: int, status: str):
+    db_run = db.query(DBRun).filter(DBRun.id == run_id).first()
+    if db_run:
+        db_run.status = status
+        if status in ["COMPLETED", "FAILED"]:
+            db_run.finished_at = datetime.now(timezone.utc)
+        db.commit()
+    return db_run

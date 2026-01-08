@@ -153,20 +153,20 @@ class BootstrapRunner:
             if verify_result['success']:
                 await self.log_event("INFO", f"Verification successful: {verify_result['details']}")
                 
-            # Step 4.5: Capture Running Config
-            await self.log_event("INFO", "Capturing running configuration...")
-            await asyncio.to_thread(self.session.send_line, "show running-config")
-            # Read potentially large output
-            config_output = await asyncio.to_thread(self.session.read_until_prompt)
-            
-            # Step 5: Save (write memory)
-            await self.log_event("INFO", "Saving configuration to NVRAM...")
-            save_cmds = await self.vendor.get_save_commands(config_params)
-            for s_cmd in save_cmds:
-                await asyncio.to_thread(self.session.send_line, s_cmd)
-                await asyncio.to_thread(self.session.read_until_prompt)
-            
-            repository.update_run_device_status(self.db, self.run_id, self.device_id, "VERIFIED", tasks=tasks_json, captured_config=config_output)
+                # Step 4.5: Capture Running Config
+                await self.log_event("INFO", "Capturing running configuration...")
+                await asyncio.to_thread(self.session.send_line, "show running-config")
+                # Read potentially large output
+                config_output = await asyncio.to_thread(self.session.read_until_prompt)
+                
+                # Step 5: Save (write memory)
+                await self.log_event("INFO", "Saving configuration to NVRAM...")
+                save_cmds = await self.vendor.get_save_commands(config_params)
+                for s_cmd in save_cmds:
+                    await asyncio.to_thread(self.session.send_line, s_cmd)
+                    await asyncio.to_thread(self.session.read_until_prompt)
+                
+                repository.update_run_device_status(self.db, self.run_id, self.device_id, "VERIFIED", tasks=tasks_json, captured_config=config_output)
             else:
                 await self.log_event("ERROR", f"Verification failed: {verify_result['details']}", raw=full_output, error_code=ErrorCode.VERIFY_FAILED)
                 # Still try to capture config on failure for debugging

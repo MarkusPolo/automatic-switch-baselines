@@ -173,7 +173,9 @@ class BootstrapRunner:
                 try:
                     await asyncio.to_thread(self.session.send_line, "show running-config")
                     fail_config = await asyncio.to_thread(self.session.read_until_prompt)
-                except:
+                except Exception as e:
+                    await self.log_event("ERROR", f"Failed to capture config: {e}")
+                    print(f"Config capture exception: {e}")
                     fail_config = None
 
                 repository.update_run_device_status(

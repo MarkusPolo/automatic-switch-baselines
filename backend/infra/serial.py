@@ -45,16 +45,25 @@ class SerialSession:
         effective_timeout = timeout if timeout is not None else self.timeout
         output = ""
         
+        # Anchor the regex to the end of the string, allowing for optional trailing whitespace
+        # This prevents matching '#' or '>' symbols that appear in the middle of command output (like descriptions)
+        pattern = re.compile(f"({prompt_regex})\\s*$", re.MULTILINE)
+        
         while True:
-            if self.ser.in_waiting > 0:
-                char = self.ser.read(1).decode("ascii", errors="ignore")
-                output += char
-                if re.search(prompt_regex, output):
+            n = self.ser.in_waiting
+            if n > 0:
+                # Read all available bytes instead of one by one for efficiency
+                chunk = self.ser.read(n).decode("ascii", errors="ignore")
+                output += chunk
+                
+                if pattern.search(output):
                     break
-            
-            if time.time() - start_time > effective_timeout:
-                break
-            time.sleep(0.01)
+            else:
+                # Only check time if we didn't read anything to avoid exiting 
+                # if we are receiving a lot of data fast
+                if time.time() - start_time > effective_timeout:
+                    break
+                time.sleep(0.01)
             
         return output
 

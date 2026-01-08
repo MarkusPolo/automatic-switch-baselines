@@ -80,7 +80,7 @@ function Step5Run({ jobId, onReset }) {
 
     const viewEvents = async (deviceId) => {
         try {
-            const events = await api.getRunEvents(activeRun.id);
+            const events = await api.getRunLogs(activeRun.id);
             // Filter for specific device
             const deviceEvents = events.filter(e => e.device_id === deviceId);
             const devName = runDevices.find(rd => rd.device_id === deviceId)?.status || 'Device';

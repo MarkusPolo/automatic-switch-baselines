@@ -167,22 +167,22 @@ class BootstrapRunner:
                 await asyncio.to_thread(self.session.read_until_prompt)
             
             repository.update_run_device_status(self.db, self.run_id, self.device_id, "VERIFIED", tasks=tasks_json, captured_config=config_output)
-        else:
-            await self.log_event("ERROR", f"Verification failed: {verify_result['details']}", raw=full_output, error_code=ErrorCode.VERIFY_FAILED)
-            # Still try to capture config on failure for debugging
-            try:
-                await asyncio.to_thread(self.session.send_line, "show running-config")
-                fail_config = await asyncio.to_thread(self.session.read_until_prompt)
-            except:
-                fail_config = None
+            else:
+                await self.log_event("ERROR", f"Verification failed: {verify_result['details']}", raw=full_output, error_code=ErrorCode.VERIFY_FAILED)
+                # Still try to capture config on failure for debugging
+                try:
+                    await asyncio.to_thread(self.session.send_line, "show running-config")
+                    fail_config = await asyncio.to_thread(self.session.read_until_prompt)
+                except:
+                    fail_config = None
 
-            repository.update_run_device_status(
-                self.db, self.run_id, self.device_id, "FAILED", 
-                error_message=f"Verification failed: {verify_result['details']}",
-                error_code=ErrorCode.VERIFY_FAILED,
-                tasks=tasks_json,
-                captured_config=fail_config
-            )
+                repository.update_run_device_status(
+                    self.db, self.run_id, self.device_id, "FAILED", 
+                    error_message=f"Verification failed: {verify_result['details']}",
+                    error_code=ErrorCode.VERIFY_FAILED,
+                    tasks=tasks_json,
+                    captured_config=fail_config
+                )
 
         except Exception as e:
             err_code = ErrorCode.COMMAND_ERROR

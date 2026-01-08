@@ -230,6 +230,24 @@ async def bulk_preview(job_id: int, db: Session = Depends(database.get_db)):
         previews.append(await get_device_preview(job_id, device.id, db))
     return previews
 
+@app.get("/runs/{run_id}/devices/{device_id}/config")
+def get_run_device_config(run_id: int, device_id: int, db: Session = Depends(database.get_db)):
+    db_rd = db.query(database.DBRunDevice).filter(
+        database.DBRunDevice.run_id == run_id, 
+        database.DBRunDevice.device_id == device_id
+    ).first()
+    
+    if not db_rd:
+        raise HTTPException(status_code=404, detail="Run device not found")
+        
+    config = db_rd.captured_config or "No configuration captured."
+    
+    return Response(
+        content=config,
+        media_type="text/plain",
+        headers={"Content-Disposition": f"attachment; filename=config_{run_id}_{device_id}.txt"}
+    )
+
 @app.get("/runs/{run_id}/report.json")
 def get_run_report_json(run_id: int, db: Session = Depends(database.get_db)):
     service = ReportService(db)

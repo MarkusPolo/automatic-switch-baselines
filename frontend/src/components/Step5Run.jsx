@@ -147,9 +147,14 @@ function Step5Run({ jobId, onReset }) {
                                     </td>
                                     <td style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{rd.template_hash || '-'}</td>
                                     <td>
-                                        <button className="btn btn-ghost" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} onClick={() => viewEvents(rd.device_id)}>
-                                            Logs
-                                        </button>
+                                        <div className="flex gap-1">
+                                            <button className="btn btn-ghost" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} onClick={() => viewEvents(rd.device_id)}>
+                                                Logs
+                                            </button>
+                                            <button className="btn btn-ghost" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} onClick={() => window.open(`${api.API_URL}/runs/${activeRun.id}/devices/${rd.device_id}/config`, '_blank')}>
+                                                Config
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

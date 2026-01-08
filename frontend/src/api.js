@@ -73,6 +73,8 @@ export const api = {
   getRunDevices: (runId) => request(`/runs/${runId}/devices`),
   getRunLogs: (id) => request(`/runs/${id}/logs`),
 
+  API_URL: API_URL, // Export for direct link generation
+
   // Reports
   getReportJson: (id) => `${API_URL}/runs/${id}/report.json`,
   getReportCsv: (id) => `${API_URL}/runs/${id}/report.csv`,

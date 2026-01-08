@@ -73,6 +73,7 @@ class RunDevice(BaseModel):
     error_message: Optional[str] = None
     error_code: Optional[str] = None
     template_hash: Optional[str] = None
+    captured_config: Optional[str] = None
 
     class Config:
         from_attributes = True
